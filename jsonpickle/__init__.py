@@ -279,7 +279,7 @@ load_backend = json.load_backend
 remove_backend = json.remove_backend
 
 
-def encode(value, unpicklable=True, max_depth=None):
+def encode(value, unpicklable=True, max_depth=None, use_ref=None):
     """
     Return a JSON formatted representation of value, a Python object.
 
