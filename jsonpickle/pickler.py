@@ -19,7 +19,10 @@ class Pickler(object):
     the objects into object types beyond what the standard
     simplejson library supports.
 
-    Setting max_depth to a negative number means there is no
+    use_ref toggle usage of reference. If use_ref is not given it follows
+    unpicklable value. use_ref off means possible reccursion problem.
+
+    Setting max_depth to a negative number or None means there is no
     limit to the depth jsonpickle should recurse into an
     object.  Setting it to zero or higher places a hard limit
     on how deep jsonpickle recurses into objects, dictionaries, etc.
@@ -29,8 +32,12 @@ class Pickler(object):
     'hello world'
     """
 
-    def __init__(self, unpicklable=True, max_depth=None):
+    def __init__(self, unpicklable=True, max_depth=None, use_ref=None):
         self.unpicklable = unpicklable
+        # compat mode, use_ref == unpicklable
+        if use_ref is None:
+            use_ref = unpicklable
+        self.use_ref = use_ref
         ## The current recursion depth
         self._depth = -1
         ## The maximal recursion depth
@@ -56,8 +63,7 @@ class Pickler(object):
         return value
 
     def _mkref(self, obj):
-        # Do not use references if not unpicklable.
-        if self.unpicklable is False:
+        if self.use_ref is False:
             return True
         objid = id(obj)
         if objid not in self._objs:
