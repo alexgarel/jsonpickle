@@ -586,26 +586,58 @@ class Mixin(object):
 
 
 class UnicodeMixin(unicode, Mixin):
+
     def __add__(self, rhs):
         obj = super(UnicodeMixin, self).__add__(rhs)
         return UnicodeMixin(obj)
 
 
+class Dummy(object):
+    flip_on_store = False
+    dummy = True
+
+class HandledDummy(Dummy):
+    pass
+
+class UnicodeMixinSubClass(Dummy, UnicodeMixin):
+    pass
+
+class DummySubClass(HandledDummy, UnicodeMixin):
+    pass
+
+
 class UnicodeMixinHandler(handlers.BaseHandler):
+
     def flatten(self, obj, data):
         data['value'] = obj
         return data
 
     def restore(self, obj):
-        return UnicodeMixin(obj['value'])
+        return self.cls(obj['value'])
+
+
+class HandledDummyHandler(handlers.BaseHandler):
+
+    def flatten(self, obj, data):
+        data['dummy'] = obj.dummy
+        data['flip_on_store'] = not(obj.flip_on_store)
+        return data
+
+    def restore(self, obj):
+        value = self.cls()
+        value.dummy = obj['dummy']
+        value.flip_on_store = obj['flip_on_store']
+        return value
 
 
 class ExternalHandlerTestCase(unittest.TestCase):
     def setUp(self):
         handlers.registry.register(UnicodeMixin, UnicodeMixinHandler)
+        handlers.registry.register(HandledDummy, HandledDummyHandler)
 
     def tearDown(self):
         handlers.registry.unregister(UnicodeMixin)
+        handlers.registry.unregister(HandledDummy)
 
     def test_unicode_mixin(self):
         obj = UnicodeMixin('test')
@@ -621,6 +653,54 @@ class ExternalHandlerTestCase(unittest.TestCase):
         self.assertEqual(unicode(new_obj), u'test passed')
         self.assertEqual(type(new_obj), UnicodeMixin)
         self.assertTrue(new_obj.ok())
+
+    def test_unicode_mixin_subclass(self):
+        """a superclass get its subclass handler"""
+        obj = UnicodeMixinSubClass('test')
+        self.assertEqual(unicode(obj), u'test')
+
+        # Encode into JSON
+        content = jsonpickle.encode(obj)
+
+        # Resurrect from JSON
+        new_obj = jsonpickle.decode(content)
+        passed = new_obj + ' passed'
+
+        self.assertEqual(unicode(passed), u'test passed')
+        self.assertEqual(type(new_obj), UnicodeMixinSubClass)
+        self.assertTrue(new_obj.ok())
+        self.assertTrue(new_obj.dummy)
+
+    def test_handeled_dummy(self):
+        """strange handler works"""
+        obj = HandledDummy()
+        self.assertFalse(obj.flip_on_store)
+
+        # Encode into JSON
+        content = jsonpickle.encode(obj)
+
+        # Resurrect from JSON
+        new_obj = jsonpickle.decode(content)
+
+        self.assertEqual(type(new_obj), HandledDummy)
+        self.assertTrue(new_obj.flip_on_store)
+        self.assertTrue(new_obj.dummy)
+
+    def test_dummy_subclass(self):
+        """here we test that mro is respected"""
+        obj = DummySubClass()
+        self.assertFalse(obj.flip_on_store)
+
+        # Encode into JSON
+        content = jsonpickle.encode(obj)
+
+        # Resurrect from JSON
+        new_obj = jsonpickle.decode(content)
+
+        self.assertEqual(type(new_obj), DummySubClass)
+        self.assertTrue(new_obj.flip_on_store)
+        self.assertTrue(new_obj.dummy)
+        self.assertEqual(unicode(new_obj), u'')  # we loose value
 
 
 def suite():
