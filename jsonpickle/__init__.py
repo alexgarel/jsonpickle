@@ -279,7 +279,7 @@ load_backend = json.load_backend
 remove_backend = json.remove_backend
 
 
-def encode(value, unpicklable=True, max_depth=None):
+def encode(value, unpicklable=True, max_depth=None, use_ref=None):
     """
     Return a JSON formatted representation of value, a Python object.
 
@@ -309,7 +309,7 @@ def encode(value, unpicklable=True, max_depth=None):
 
     """
     j = Pickler(unpicklable=unpicklable,
-                max_depth=max_depth)
+                max_depth=max_depth, use_ref=use_ref)
     return json.encode(j.flatten(value))
 
 def decode(string):
