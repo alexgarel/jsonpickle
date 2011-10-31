@@ -34,7 +34,7 @@ class Pickler(object):
 
     def __init__(self, unpicklable=True, max_depth=None, use_ref=None):
         self.unpicklable = unpicklable
-        # compat mode, use_ref == unpicklable
+        # compat mode, use_ref == unpicklable
         if use_ref is None:
             use_ref = unpicklable
         self.use_ref = use_ref
